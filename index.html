@@ -159,6 +159,17 @@
   .req-list li { padding: 4px 0; list-style: none; display: flex; align-items: center; gap: 10px; }
   .req-list li::before { content: "▸"; color: var(--accent); }
 
+  /* 版本选择器 */
+  .dl-versions { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; align-items: center; }
+  .dl-versions-label { color: var(--text-dim); font-size: 14px; }
+  .dl-select { background: rgba(10,12,28,.92); color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 11px 18px; font-size: 14px; font-family: inherit; outline: none; min-width: 320px; max-width: 100%; cursor: pointer; }
+  .dl-select:focus { border-color: var(--accent); box-shadow: 0 0 14px var(--accent-glow); }
+  .dl-select:disabled { opacity: .6; cursor: default; }
+  .dl-select option { background: #0a0c1c; color: var(--text); }
+  .dl-go { padding: 10px 22px; font-size: 14px; }
+  .dl-fallback { margin-top: 20px; font-size: 14px; color: var(--text-dim); }
+  .dl-fallback a { color: var(--accent); }
+
   /* 许可证 */
   .license { max-width: 860px; margin: auto; }
   .license-box { background: rgba(10,12,28,.85); border: 1px solid rgba(255,255,255,.07); border-radius: var(--radius); padding: 34px 34px; }
@@ -357,14 +368,24 @@
     <div class="download reveal">
       <div class="sec-tag">DOWNLOAD</div>
       <div class="big">Windows 版</div>
-      <p class="sec-sub">单文件便携安装包 · 安装包约 174 MB</p>
+      <p class="sec-sub">单文件便携安装包 · 免安装绿色运行，下载即用</p>
       <a class="btn btn-primary" href="https://github.com/1175460179qqcom-rgb/starry-flight-/releases/latest/download/StarryFlightPlayer.exe">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
         下载 StarryFlightPlayer.exe
       </a>
+      <div class="dl-versions">
+        <label class="dl-versions-label" for="verSelect">选择版本下载：</label>
+        <select id="verSelect" class="dl-select" disabled>
+          <option value="">正在加载版本列表…</option>
+        </select>
+        <a class="btn btn-ghost dl-go" id="dlGo" href="https://github.com/1175460179qqcom-rgb/starry-flight-/releases/latest/download/StarryFlightPlayer.exe" target="_blank" rel="noopener">下载所选版本</a>
+      </div>
+      <div class="dl-fallback" id="dlFallback" style="display:none;">
+        版本列表加载失败，可前往 <a href="https://github.com/1175460179qqcom-rgb/starry-flight-/releases" target="_blank" rel="noopener">GitHub Releases 页面</a> 选择任意版本下载
+      </div>
       <div class="dl-meta">
-        <span>文件大小：<b>约 174 MB</b></span>
-        <span>版本：<b>v1.0.0</b></span>
+        <span>文件大小：<b id="dl-size">—</b></span>
+        <span>版本：<b id="dl-version">—</b></span>
         <span>平台：<b>Windows 10 / 11 · 64 位</b></span>
       </div>
       <ul class="req-list">
@@ -438,6 +459,73 @@
     entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('on'); io.unobserve(en.target); } });
   }, { threshold: 0.12 });
   document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+
+  // 下载区：从 GitHub API 拉取 Releases，渲染"选择版本下载"下拉
+  const SF_REPO = '1175460179qqcom-rgb/starry-flight-';
+  const dlSelect = document.getElementById('verSelect');
+  const dlGo = document.getElementById('dlGo');
+  const dlFallback = document.getElementById('dlFallback');
+  const dlSize = document.getElementById('dl-size');
+  const dlVersion = document.getElementById('dl-version');
+  const fmtMB = (b) => (b / 1048576).toFixed(1) + ' MB';
+  const fmtDate = (iso) => {
+    const d = new Date(iso);
+    const p = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  };
+  async function loadReleases() {
+    try {
+      const res = await fetch('https://api.github.com/repos/' + SF_REPO + '/releases', {
+        headers: { 'Accept': 'application/vnd.github+json' }
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const rels = await res.json();
+      if (!Array.isArray(rels)) throw new Error('bad payload');
+      const withAsset = rels
+        .filter((r) => Array.isArray(r.assets) && r.assets.some((a) => a.name === 'StarryFlightPlayer.exe'))
+        .sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
+      if (withAsset.length === 0) throw new Error('no assets');
+
+      // 最新版元信息（动态填充，避免写死过期数值）
+      const latest = withAsset[0];
+      const latestAsset = latest.assets.find((a) => a.name === 'StarryFlightPlayer.exe');
+      dlVersion.textContent = latest.tag_name || 'latest';
+      dlSize.textContent = latestAsset ? fmtMB(latestAsset.size) : '—';
+
+      // 下拉：最新版 + 全部历史版本
+      dlSelect.innerHTML = '';
+      const latestOpt = document.createElement('option');
+      latestOpt.value = '';
+      latestOpt.textContent = '最新版（' + (latest.tag_name || 'latest') + ' · ' + (latestAsset ? fmtMB(latestAsset.size) : '—') + ' · ' + fmtDate(latest.published_at) + '）';
+      dlSelect.appendChild(latestOpt);
+      withAsset.forEach((r) => {
+        const a = r.assets.find((x) => x.name === 'StarryFlightPlayer.exe');
+        const o = document.createElement('option');
+        o.value = r.tag_name;
+        o.textContent = r.tag_name + (r.name && r.name !== r.tag_name ? '（' + r.name + '）' : '') + ' · ' + (a ? fmtMB(a.size) : '—') + ' · ' + fmtDate(r.published_at);
+        dlSelect.appendChild(o);
+      });
+      dlSelect.disabled = false;
+
+      // 选中变化 → 更新跳转链接（默认最新版直链）
+      dlSelect.addEventListener('change', () => {
+        const tag = dlSelect.value;
+        if (tag) {
+          dlGo.href = 'https://github.com/' + SF_REPO + '/releases/download/' + encodeURIComponent(tag) + '/StarryFlightPlayer.exe';
+        } else {
+          dlGo.href = 'https://github.com/' + SF_REPO + '/releases/latest/download/StarryFlightPlayer.exe';
+        }
+      });
+    } catch (e) {
+      // 优雅降级：隐藏选择器，展示 GitHub Releases 入口链接
+      dlFallback.style.display = 'block';
+      dlSelect.style.display = 'none';
+      dlGo.style.display = 'none';
+      const lab = document.querySelector('.dl-versions-label');
+      if (lab) lab.style.display = 'none';
+    }
+  }
+  loadReleases();
 </script>
 </body>
 </html>
