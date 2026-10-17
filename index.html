@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StarryFlightPlayer — 星空飞行，本地音乐播放器</title>
+<meta name="description" content="StarryFlightPlayer：基于 PyQt5 的 Windows 本地音乐播放器。纯本地、无账号，支持七种音频格式、七语言界面、桌面歌词与霓虹频谱。Apache 2.0 开源。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #00f5d4;
+    --accent-glow: rgba(0, 245, 212, .45);
+    --pink: #ff3df0;
+    --purple: #7a5cff;
+    --bg-0: #05060f;
+    --bg-1: #0a0c1c;
+    --bg-2: #12152b;
+    --line: rgba(0, 245, 212, .18);
+    --text: #dce9ea;
+    --text-dim: #8fa3a6;
+    --radius: 16px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: var(--bg-0);
+    color: var(--text);
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+  ::selection { background: var(--accent); color: #04121a; }
+  a { color: var(--accent); text-decoration: none; }
+  .mono { font-family: "Orbitron", monospace; }
+
+  /* 背景光晕 */
+  .bg-fx { position: fixed; inset: 0; z-index: -2; pointer-events: none;
+    background:
+      radial-gradient(620px 420px at 15% 0%, rgba(122, 92, 255, .16), transparent 60%),
+      radial-gradient(700px 480px at 85% 12%, rgba(0, 245, 212, .12), transparent 60%),
+      radial-gradient(800px 600px at 50% 100%, rgba(255, 61, 240, .07), transparent 60%),
+      linear-gradient(180deg, var(--bg-0), var(--bg-1));
+  }
+  .grid-fx { position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .35;
+    background-image:
+      linear-gradient(rgba(0,245,212,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,245,212,.05) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 90% 70% at 50% 20%, #000 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 20%, #000 30%, transparent 75%);
+  }
+
+  /* 导航 */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(14px);
+    background: rgba(5, 6, 15, .78);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav { max-width: 1180px; margin: auto; display: flex; align-items: center;
+    justify-content: space-between; padding: 14px 22px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+  .brand .logo { width: 34px; height: 34px; filter: drop-shadow(0 0 8px var(--accent-glow)); }
+  .brand b { font-size: 17px; letter-spacing: .5px; }
+  .nav-links { display: flex; gap: 26px; align-items: center; }
+  .nav-links a { color: var(--text-dim); font-size: 14.5px; transition: color .2s, text-shadow .2s; }
+  .nav-links a:hover { color: var(--accent); text-shadow: 0 0 12px var(--accent-glow); }
+  .nav-cta { padding: 8px 18px; border: 1px solid var(--accent); border-radius: 999px;
+    color: var(--accent) !important; box-shadow: inset 0 0 14px rgba(0,245,212,.15); transition: all .25s; }
+  .nav-cta:hover { background: var(--accent); color: #04121a !important; box-shadow: 0 0 22px var(--accent-glow); }
+  .burger { display: none; flex-direction: column; gap: 5px; cursor: pointer; background: none; border: 0; }
+  .burger span { width: 24px; height: 2px; background: var(--accent); border-radius: 2px; transition: .3s; }
+
+  main { max-width: 1180px; margin: auto; padding: 0 22px; }
+
+  /* Hero */
+  .hero { min-height: 88vh; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; text-align: center; padding: 90px 0 70px; position: relative; }
+  .hero .badge { display: inline-flex; align-items: center; gap: 8px; padding: 7px 16px;
+    border: 1px solid var(--line); border-radius: 999px; color: var(--text-dim);
+    font-size: 13px; letter-spacing: 1px; background: rgba(0,245,212,.05); }
+  .hero .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 10px var(--accent); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  .hero h1 {
+    font-family: "Orbitron", monospace;
+    font-size: clamp(34px, 6.2vw, 68px);
+    font-weight: 900; letter-spacing: 2px; margin: 26px 0 6px;
+    background: linear-gradient(120deg, #fff 0%, var(--accent) 55%, var(--pink) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 26px rgba(0,245,212,.25));
+  }
+  .hero .tagline { font-size: clamp(16px, 2.2vw, 22px); color: var(--text-dim); max-width: 720px; }
+  .hero .tagline em { color: var(--accent); font-style: normal; }
+  .hero-actions { margin-top: 40px; display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 15px 34px; border-radius: 999px; font-size: 16px; font-weight: 700;
+    transition: all .25s; cursor: pointer;
+  }
+  .btn-primary {
+    background: var(--accent); color: #04121a;
+    box-shadow: 0 0 26px var(--accent-glow), inset 0 0 10px rgba(255,255,255,.25);
+  }
+  .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 0 42px var(--accent-glow); }
+  .btn-ghost { border: 1px solid var(--line); color: var(--text); background: rgba(0,245,212,.04); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-3px);
+    box-shadow: 0 0 18px rgba(0,245,212,.18); }
+  .hero-meta { margin-top: 30px; color: var(--text-dim); font-size: 13.5px; display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; }
+  .hero-meta span { display: inline-flex; align-items: center; gap: 6px; }
+
+  /* 区块通用 */
+  section { padding: 92px 0; }
+  .sec-head { text-align: center; margin-bottom: 52px; }
+  .sec-tag { font-family: "Orbitron", monospace; color: var(--accent); font-size: 13px; letter-spacing: 4px; }
+  .sec-title { font-size: clamp(26px, 3.6vw, 38px); font-weight: 700; margin-top: 10px; }
+  .sec-sub { color: var(--text-dim); margin-top: 12px; max-width: 640px; margin-left: auto; margin-right: auto; }
+
+  /* 功能卡片 */
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .card {
+    position: relative; padding: 28px 24px; border-radius: var(--radius);
+    background: linear-gradient(160deg, rgba(18,21,43,.9), rgba(10,12,28,.9));
+    border: 1px solid rgba(255,255,255,.06);
+    transition: transform .3s, border-color .3s, box-shadow .3s;
+    overflow: hidden;
+  }
+  .card::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(320px 160px at 80% -20%, rgba(0,245,212,.12), transparent 70%); opacity: 0; transition: opacity .3s; }
+  .card:hover { transform: translateY(-6px); border-color: var(--line);
+    box-shadow: 0 12px 40px rgba(0,0,0,.45), 0 0 24px rgba(0,245,212,.08); }
+  .card:hover::before { opacity: 1; }
+  .card .icon { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 12px;
+    background: rgba(0,245,212,.09); border: 1px solid var(--line); color: var(--accent); font-size: 22px;
+    margin-bottom: 18px; box-shadow: 0 0 16px rgba(0,245,212,.12); }
+  .card h3 { font-size: 17px; margin-bottom: 8px; }
+  .card p { font-size: 14px; color: var(--text-dim); }
+
+  /* 技术特性 */
+  .tech { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
+  .tech-item { text-align: center; padding: 26px 14px; border-radius: var(--radius);
+    background: rgba(18,21,43,.55); border: 1px solid rgba(255,255,255,.05); transition: .3s; }
+  .tech-item:hover { border-color: var(--line); background: rgba(18,21,43,.9); transform: translateY(-4px); }
+  .tech-item .icon { font-size: 34px; color: var(--accent); margin-bottom: 12px; display: block; filter: drop-shadow(0 0 10px var(--accent-glow)); }
+  .tech-item h3 { font-size: 15.5px; }
+  .tech-item p { font-size: 13px; color: var(--text-dim); margin-top: 6px; }
+
+  /* 下载 */
+  .download { background: linear-gradient(160deg, rgba(122,92,255,.10), rgba(0,245,212,.06) 55%, rgba(255,61,240,.07));
+    border: 1px solid var(--line); border-radius: 24px; padding: 58px 40px; text-align: center; }
+  .download .big { font-size: clamp(30px, 5vw, 46px); font-weight: 900; font-family: "Orbitron", monospace;
+    color: var(--accent); text-shadow: 0 0 28px var(--accent-glow); }
+  .download .btn { margin-top: 30px; }
+  .dl-meta { margin-top: 22px; display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; color: var(--text-dim); font-size: 14px; }
+  .dl-meta b { color: var(--text); }
+  .req-list { margin: 26px auto 0; max-width: 520px; text-align: left; color: var(--text-dim); font-size: 14px; }
+  .req-list li { padding: 4px 0; list-style: none; display: flex; align-items: center; gap: 10px; }
+  .req-list li::before { content: "▸"; color: var(--accent); }
+
+  /* 许可证 */
+  .license { max-width: 860px; margin: auto; }
+  .license-box { background: rgba(10,12,28,.85); border: 1px solid rgba(255,255,255,.07); border-radius: var(--radius); padding: 34px 34px; }
+  .license-box .lic-title { display: flex; align-items: center; gap: 12px; font-size: 20px; margin-bottom: 14px; }
+  .license-box .lic-title .tag { font-family: "Orbitron", monospace; font-size: 12px; letter-spacing: 2px;
+    padding: 4px 12px; border-radius: 999px; background: rgba(0,245,212,.12); border: 1px solid var(--line); color: var(--accent); }
+  .license-box p { color: var(--text-dim); font-size: 14.5px; }
+  .license-box ul { margin: 14px 0 0 20px; color: var(--text-dim); font-size: 14.5px; }
+  .license-box li { padding: 3px 0; }
+  .license-box .link { display: inline-block; margin-top: 18px; font-size: 14px; }
+
+  /* 页脚 */
+  footer { border-top: 1px solid var(--line); padding: 44px 22px 34px; text-align: center;
+    background: rgba(5,6,15,.8); }
+  footer .f-brand { font-family: "Orbitron", monospace; color: var(--text); letter-spacing: 2px; font-weight: 700; }
+  footer .f-links { margin-top: 14px; display: flex; gap: 26px; justify-content: center; flex-wrap: wrap; }
+  footer .f-links a { color: var(--text-dim); font-size: 14px; }
+  footer .f-links a:hover { color: var(--accent); }
+  footer .copy { margin-top: 20px; color: var(--text-dim); font-size: 13px; }
+  footer .copy b { color: var(--accent); }
+
+  /* 滚动显现动画 */
+  .reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s ease; }
+  .reveal.on { opacity: 1; transform: none; }
+
+  /* 响应式 */
+  @media (max-width: 900px) {
+    .cards { grid-template-columns: repeat(2, 1fr); }
+    .tech { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 620px) {
+    .nav-links { display: none; position: absolute; top: 100%; left: 0; right: 0;
+      flex-direction: column; gap: 0; background: rgba(5,6,15,.96); border-bottom: 1px solid var(--line);
+      padding: 8px 22px 18px; }
+    .nav-links.open { display: flex; }
+    .nav-links a { padding: 11px 0; width: 100%; border-bottom: 1px solid rgba(255,255,255,.05); }
+    .burger { display: flex; }
+    .cards, .tech { grid-template-columns: 1fr; }
+    .download { padding: 40px 20px; }
+    .hero-actions .btn { width: 100%; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+<div class="bg-fx"></div>
+<div class="grid-fx"></div>
+
+<!-- 导航 -->
+<header>
+  <div class="nav">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="lg" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#00f5d4"/><stop offset="1" stop-color="#ff3df0"/>
+          </linearGradient>
+        </defs>
+        <circle cx="24" cy="24" r="21" stroke="url(#lg)" stroke-width="2.4"/>
+        <circle cx="24" cy="24" r="8" fill="url(#lg)"/>
+        <path d="M24 3v10M24 35v10M3 24h10M35 24h10" stroke="url(#lg)" stroke-width="2.4" stroke-linecap="round"/>
+      </svg>
+      <b>StarryFlightPlayer</b>
+    </div>
+    <nav class="nav-links" id="navLinks">
+      <a href="#features">功能</a>
+      <a href="#tech">技术特性</a>
+      <a href="#download">下载</a>
+      <a href="#license">许可证</a>
+      <a href="#about">关于</a>
+      <a class="nav-cta" href="https://github.com/1175460179qqcom-rgb/starry-flight-/releases" target="_blank" rel="noopener">立即下载</a>
+    </nav>
+    <button class="burger" id="burger" aria-label="打开菜单">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<main>
+  <!-- Hero -->
+  <section class="hero">
+    <span class="badge"><span class="dot"></span> APACHE 2.0 · 纯本地 · 个人开发</span>
+    <h1>StarryFlightPlayer</h1>
+    <p class="tagline">一款基于 PyQt5 的 Windows 本地音乐播放器 —— <em>无账号、无广告</em>，把歌词、频谱与霓虹美学装进你的音乐旅程。</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://github.com/1175460179qqcom-rgb/starry-flight-/releases/latest/download/StarryFlightPlayer.exe">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
+        下载 Windows 版
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/1175460179qqcom-rgb/starry-flight-" target="_blank" rel="noopener">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.91c.58.11.79-.25.79-.56v-2c-3.2.7-3.87-1.54-3.87-1.54-.53-1.34-1.28-1.7-1.28-1.7-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.35.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.12 3.05.74.81 1.18 1.83 1.18 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.04.77 2.1v3.12c0 .31.21.68.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5z"/></svg>
+        查看源码
+      </a>
+    </div>
+    <div class="hero-meta">
+      <span>🎵 七种音频格式</span>
+      <span>🌐 七语言界面</span>
+      <span>🖥️ Windows 10 / 11 · 64 位</span>
+      <span>🇨🇳 中国大陆个人开发者制作</span>
+    </div>
+  </section>
+
+  <!-- 功能亮点 -->
+  <section id="features">
+    <div class="sec-head reveal">
+      <div class="sec-tag">FEATURES</div>
+      <h2 class="sec-title">核心功能</h2>
+      <p class="sec-sub">从播放到歌词，从主题到桌面歌词，每一个细节都为本地音乐体验而设计。</p>
+    </div>
+    <div class="cards">
+      <div class="card reveal">
+        <div class="icon">🎵</div>
+        <h3>七种音频格式</h3>
+        <p>支持 MP3 / FLAC / WAV / OGG / M4A / WMA / APE 无损与常见格式，librosa 与 FFmpeg 多级解码兜底，开箱即听。</p>
+      </div>
+      <div class="card reveal">
+        <div class="icon">⏯️</div>
+        <h3>播放模式 · 变速 · 预加载</h3>
+        <p>顺序 / 单曲 / 随机三种模式一键切换；0.5x–2.0x 十六档变速；后台预加载下一首，切歌秒开，播放历史自动记录最近 50 首。</p>
+      </div>
+      <div class="card reveal">
+        <div class="icon">🌐</div>
+        <h3>七语言界面</h3>
+        <p>简体中文 / English / 日本語 / Français / Deutsch / 한국어 / Русский，设置内一键切换即时生效，首次启动可选语言。</p>
+      </div>
+      <div class="card reveal">
+        <div class="icon">📜</div>
+        <h3>本地 LRC 与桌面歌词</h3>
+        <p>自动加载歌曲同名 .lrc 与 .trans.lrc，多编码兼容；霓虹 / 彩虹高亮、三档显示模式；独立置顶桌面歌词，颜色字号字体自由调节。</p>
+      </div>
+      <div class="card reveal">
+        <div class="icon">🎨</div>
+        <h3>双主题 · 自定义皮肤</h3>
+        <p>内置赛博朋克与森林墨绿两套主题，界面圆滑度可调；支持导入本地 QSS 皮肤文件，打造属于你的配色。</p>
+      </div>
+      <div class="card reveal">
+        <div class="icon">📊</div>
+        <h3>均衡器 · 实时频谱</h3>
+        <p>五段均衡器调节；128 段实时频谱可视化，颜色模式与方块样式随心切换，跟着节拍律动。</p>
+      </div>
+      <div class="card reveal">
+        <div class="icon">❤️</div>
+        <h3>收藏与歌单</h3>
+        <p>列表右键一键收藏；自由创建多歌单、把歌曲加入任意歌单；顶部搜索框实时过滤，曲库再多也不怕。</p>
+      </div>
+      <div class="card reveal">
+        <div class="icon">⌨️</div>
+        <h3>托盘 · 快捷键 · 睡眠定时</h3>
+        <p>系统托盘常驻控制，切歌桌面通知；自定义播放 / 上一首 / 下一首快捷键；5–60 分钟睡眠定时，伴你入眠。</p>
+      </div>
+      <div class="card reveal">
+        <div class="icon">💼</div>
+        <h3>单文件便携</h3>
+        <p>一个 exe 即完整播放器，免安装绿色运行；配置与播放历史统一存放于本地 config.json，随身拷贝即迁移。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 技术特性 -->
+  <section id="tech">
+    <div class="sec-head reveal">
+      <div class="sec-tag">WHY STARFLIGHT</div>
+      <h2 class="sec-title">技术特性</h2>
+      <p class="sec-sub">专注本地、尊重隐私，StarryFlightPlayer 不收集任何个人信息。</p>
+    </div>
+    <div class="tech">
+      <div class="tech-item reveal">
+        <span class="icon">💾</span>
+        <h3>纯本地播放</h3>
+        <p>全部音乐与配置仅保存在本机，离线可用</p>
+      </div>
+      <div class="tech-item reveal">
+        <span class="icon">🔑</span>
+        <h3>无需账号</h3>
+        <p>无登录、无注册，下载即用</p>
+      </div>
+      <div class="tech-item reveal">
+        <span class="icon">👨‍💻</span>
+        <h3>个人开发</h3>
+        <p>由中国大陆独立开发者 fly 制作</p>
+      </div>
+      <div class="tech-item reveal">
+        <span class="icon">🛡️</span>
+        <h3>隐私安全</h3>
+        <p>不采集遥测、不上传歌曲与歌词数据</p>
+      </div>
+      <div class="tech-item reveal">
+        <span class="icon">📖</span>
+        <h3>Apache 2.0 开源</h3>
+        <p>完整源码托管于 GitHub，可自由使用与修改</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 下载 -->
+  <section id="download">
+    <div class="download reveal">
+      <div class="sec-tag">DOWNLOAD</div>
+      <div class="big">Windows 版</div>
+      <p class="sec-sub">单文件便携安装包 · 安装包约 174 MB</p>
+      <a class="btn btn-primary" href="https://github.com/1175460179qqcom-rgb/starry-flight-/releases/latest/download/StarryFlightPlayer.exe">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
+        下载 StarryFlightPlayer.exe
+      </a>
+      <div class="dl-meta">
+        <span>文件大小：<b>约 174 MB</b></span>
+        <span>版本：<b>v1.0.0</b></span>
+        <span>平台：<b>Windows 10 / 11 · 64 位</b></span>
+      </div>
+      <ul class="req-list">
+        <li>Windows 10 或 Windows 11（64 位操作系统）</li>
+        <li>4 GB 及以上内存推荐</li>
+        <li>无需联网即可使用全部本地功能</li>
+        <li>若下载速度较慢，可前往 <a href="https://github.com/1175460179qqcom-rgb/starry-flight-/releases" target="_blank" rel="noopener">GitHub Releases</a> 获取更多版本</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 许可证 -->
+  <section id="license">
+    <div class="license">
+      <div class="sec-head reveal">
+        <div class="sec-tag">LICENSE</div>
+        <h2 class="sec-title">开源许可证</h2>
+      </div>
+      <div class="license-box reveal">
+        <div class="lic-title">
+          Apache License 2.0
+          <span class="tag">APACHE-2.0</span>
+        </div>
+        <p>StarryFlightPlayer 以 <b>Apache License 2.0</b> 协议开源发布。您可以自由地使用、复制、修改和分发本软件，包括用于商业目的，但需遵循以下核心条款：</p>
+        <ul>
+          <li>保留原始版权声明、许可证副本与 NOTICE 信息；</li>
+          <li>对源码的修改需以明显方式标注变更；</li>
+          <li>若以源码形式分发，必须附带本许可证；</li>
+          <li>不提供任何明示或默示的担保，使用者自行承担风险。</li>
+        </ul>
+        <a class="link" href="https://github.com/1175460179qqcom-rgb/starry-flight-" target="_blank" rel="noopener">查看完整许可证与源码 →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 关于 -->
+  <section id="about">
+    <div class="sec-head reveal">
+      <div class="sec-tag">ABOUT</div>
+      <h2 class="sec-title">关于 StarryFlightPlayer</h2>
+      <p class="sec-sub">StarryFlightPlayer 由独立开发者维护，诞生于"本地音乐值得被认真对待"的信念：没有广告、没有会员墙，只有流畅的播放、精美的歌词与纯粹的私人音乐空间。</p>
+      <p class="sec-sub">我们相信音乐播放器应该轻量、快速、诚实。欢迎在 GitHub 上提交 Issue 与建议，一起让 StarryFlightPlayer 变得更好。</p>
+    </div>
+  </section>
+</main>
+
+<!-- 页脚 -->
+<footer id="footer">
+  <div class="f-brand">STARRYFLIGHTPLAYER</div>
+  <div class="f-links">
+    <a href="#features">功能</a>
+    <a href="#tech">技术特性</a>
+    <a href="#download">下载</a>
+    <a href="#license">许可证</a>
+    <a href="https://github.com/1175460179qqcom-rgb/starry-flight-" target="_blank" rel="noopener">GitHub 仓库</a>
+    <a href="https://github.com/1175460179qqcom-rgb/starry-flight-/releases" target="_blank" rel="noopener">Releases</a>
+  </div>
+  <div class="copy">© 2026 fly · StarryFlightPlayer · Released under the <b>Apache 2.0</b> License</div>
+  <div class="copy">由中国大陆个人开发者 fly 制作 · Made with ❤ for local music lovers</div>
+</footer>
+
+<script>
+  // 移动端菜单
+  const burger = document.getElementById('burger');
+  const navLinks = document.getElementById('navLinks');
+  burger.addEventListener('click', () => navLinks.classList.toggle('open'));
+  navLinks.addEventListener('click', (e) => { if (e.target.tagName === 'A') navLinks.classList.remove('open'); });
+
+  // 滚动显现动画
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('on'); io.unobserve(en.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+</script>
+</body>
+</html>
