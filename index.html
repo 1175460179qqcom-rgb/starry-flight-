@@ -147,28 +147,31 @@
   .tech-item h3 { font-size: 15.5px; }
   .tech-item p { font-size: 13px; color: var(--text-dim); margin-top: 6px; }
 
-  /* 下载 */
-  .download { background: linear-gradient(160deg, rgba(122,92,255,.10), rgba(0,245,212,.06) 55%, rgba(255,61,240,.07));
-    border: 1px solid var(--line); border-radius: 24px; padding: 58px 40px; text-align: center; }
-  .download .big { font-size: clamp(30px, 5vw, 46px); font-weight: 900; font-family: "Orbitron", monospace;
-    color: var(--accent); text-shadow: 0 0 28px var(--accent-glow); }
-  .download .btn { margin-top: 30px; }
-  .dl-meta { margin-top: 22px; display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; color: var(--text-dim); font-size: 14px; }
-  .dl-meta b { color: var(--text); }
-  .req-list { margin: 26px auto 0; max-width: 520px; text-align: left; color: var(--text-dim); font-size: 14px; }
-  .req-list li { padding: 4px 0; list-style: none; display: flex; align-items: center; gap: 10px; }
-  .req-list li::before { content: "▸"; color: var(--accent); }
-
-  /* 版本选择器 */
-  .dl-versions { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; align-items: center; }
-  .dl-versions-label { color: var(--text-dim); font-size: 14px; }
-  .dl-select { background: rgba(10,12,28,.92); color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 11px 18px; font-size: 14px; font-family: inherit; outline: none; min-width: 320px; max-width: 100%; cursor: pointer; }
-  .dl-select:focus { border-color: var(--accent); box-shadow: 0 0 14px var(--accent-glow); }
-  .dl-select:disabled { opacity: .6; cursor: default; }
-  .dl-select option { background: #0a0c1c; color: var(--text); }
-  .dl-go { padding: 10px 22px; font-size: 14px; }
-  .dl-fallback { margin-top: 20px; font-size: 14px; color: var(--text-dim); }
-  .dl-fallback a { color: var(--accent); }
+  /* 版本选择弹窗 */
+  .dl-modal-overlay { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center;
+    background: rgba(5, 6, 15, .72); backdrop-filter: blur(6px); padding: 20px; }
+  .dl-modal-overlay.open { display: flex; }
+  .dl-modal { width: 100%; max-width: 560px; max-height: 78vh; overflow-y: auto;
+    background: linear-gradient(160deg, rgba(18,21,43,.98), rgba(10,12,28,.98));
+    border: 1px solid var(--line); border-radius: 18px; padding: 26px 24px;
+    box-shadow: 0 18px 60px rgba(0,0,0,.55), 0 0 30px var(--accent-glow); }
+  .dl-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+  .dl-modal-title { font-family: "Orbitron", monospace; font-size: 17px; font-weight: 700; color: var(--accent); }
+  .dl-modal-close { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line);
+    background: rgba(0,245,212,.06); color: var(--text-dim); font-size: 18px; line-height: 1; cursor: pointer; transition: all .25s; }
+  .dl-modal-close:hover { color: var(--accent); border-color: var(--accent); }
+  .dl-ver-list { display: flex; flex-direction: column; gap: 10px; }
+  .dl-ver-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 16px;
+    border-radius: 12px; border: 1px solid rgba(255,255,255,.07); background: rgba(10,12,28,.85);
+    color: var(--text); transition: all .25s; text-decoration: none; }
+  .dl-ver-item:hover { border-color: var(--accent); box-shadow: 0 0 16px var(--accent-glow); transform: translateY(-2px); }
+  .dl-ver-item .v-tag { font-family: "Orbitron", monospace; font-weight: 700; color: var(--accent); }
+  .dl-ver-item .v-latest { margin-left: 8px; font-size: 11px; color: #04121a; background: var(--accent);
+    border-radius: 999px; padding: 2px 8px; font-weight: 700; vertical-align: middle; }
+  .dl-ver-item .v-meta { font-size: 12.5px; color: var(--text-dim); white-space: nowrap; }
+  .dl-modal-loading { text-align: center; padding: 26px 0; color: var(--text-dim); font-size: 14px; }
+  .dl-modal-tip { margin-top: 18px; font-size: 13px; color: var(--text-dim); text-align: center; }
+  .dl-modal-tip a { color: var(--accent); }
 
   /* 许可证 */
   .license { max-width: 860px; margin: auto; }
@@ -208,7 +211,6 @@
     .nav-links a { padding: 11px 0; width: 100%; border-bottom: 1px solid rgba(255,255,255,.05); }
     .burger { display: flex; }
     .cards, .tech { grid-template-columns: 1fr; }
-    .download { padding: 40px 20px; }
     .hero-actions .btn { width: 100%; justify-content: center; }
   }
 </style>
@@ -236,7 +238,6 @@
     <nav class="nav-links" id="navLinks">
       <a href="#features">功能</a>
       <a href="#tech">技术特性</a>
-      <a href="#download">下载</a>
       <a href="#license">许可证</a>
       <a href="#about">关于</a>
       <a class="nav-cta" href="https://github.com/1175460179qqcom-rgb/starry-flight-/releases" target="_blank" rel="noopener">立即下载</a>
@@ -254,10 +255,10 @@
     <h1>StarryFlightPlayer</h1>
     <p class="tagline">一款基于 PyQt5 的 Windows 本地音乐播放器 —— <em>无账号、无广告</em>，把歌词、频谱与霓虹美学装进你的音乐旅程。</p>
     <div class="hero-actions">
-      <a class="btn btn-primary" href="https://github.com/1175460179qqcom-rgb/starry-flight-/releases/latest/download/StarryFlightPlayer.exe">
+      <button type="button" class="btn btn-primary" id="topDlBtn" aria-haspopup="dialog">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
         下载 Windows 版
-      </a>
+      </button>
       <a class="btn btn-ghost" href="https://github.com/1175460179qqcom-rgb/starry-flight-" target="_blank" rel="noopener">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.91c.58.11.79-.25.79-.56v-2c-3.2.7-3.87-1.54-3.87-1.54-.53-1.34-1.28-1.7-1.28-1.7-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.35.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.12 3.05.74.81 1.18 1.83 1.18 3.09 0 4.41-2.69 5.38-5.25 5.67.41.35.77 1.04.77 2.1v3.12c0 .31.21.68.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5z"/></svg>
         查看源码
@@ -363,40 +364,6 @@
     </div>
   </section>
 
-  <!-- 下载 -->
-  <section id="download">
-    <div class="download reveal">
-      <div class="sec-tag">DOWNLOAD</div>
-      <div class="big">Windows 版</div>
-      <p class="sec-sub">单文件便携安装包 · 免安装绿色运行，下载即用</p>
-      <a class="btn btn-primary" href="https://github.com/1175460179qqcom-rgb/starry-flight-/releases/latest/download/StarryFlightPlayer.exe">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
-        下载 StarryFlightPlayer.exe
-      </a>
-      <div class="dl-versions">
-        <label class="dl-versions-label" for="verSelect">选择版本下载：</label>
-        <select id="verSelect" class="dl-select" disabled>
-          <option value="">正在加载版本列表…</option>
-        </select>
-        <a class="btn btn-ghost dl-go" id="dlGo" href="https://github.com/1175460179qqcom-rgb/starry-flight-/releases/latest/download/StarryFlightPlayer.exe" target="_blank" rel="noopener">下载所选版本</a>
-      </div>
-      <div class="dl-fallback" id="dlFallback" style="display:none;">
-        版本列表加载失败，可前往 <a href="https://github.com/1175460179qqcom-rgb/starry-flight-/releases" target="_blank" rel="noopener">GitHub Releases 页面</a> 选择任意版本下载
-      </div>
-      <div class="dl-meta">
-        <span>文件大小：<b id="dl-size">—</b></span>
-        <span>版本：<b id="dl-version">—</b></span>
-        <span>平台：<b>Windows 10 / 11 · 64 位</b></span>
-      </div>
-      <ul class="req-list">
-        <li>Windows 10 或 Windows 11（64 位操作系统）</li>
-        <li>4 GB 及以上内存推荐</li>
-        <li>无需联网即可使用全部本地功能</li>
-        <li>若下载速度较慢，可前往 <a href="https://github.com/1175460179qqcom-rgb/starry-flight-/releases" target="_blank" rel="noopener">GitHub Releases</a> 获取更多版本</li>
-      </ul>
-    </div>
-  </section>
-
   <!-- 许可证 -->
   <section id="license">
     <div class="license">
@@ -432,16 +399,30 @@
   </section>
 </main>
 
+<!-- 版本选择弹窗 -->
+<div class="dl-modal-overlay" id="dlModal" role="dialog" aria-modal="true" aria-label="选择下载版本">
+  <div class="dl-modal">
+    <div class="dl-modal-head">
+      <div class="dl-modal-title">选择版本下载</div>
+      <button type="button" class="dl-modal-close" id="dlModalClose" aria-label="关闭">✕</button>
+    </div>
+    <div class="dl-ver-list" id="dlVersionList">
+      <div class="dl-modal-loading">正在加载版本列表…</div>
+    </div>
+    <div class="dl-modal-tip" id="dlModalTip">提示：点击任意版本即可开始下载 · 也可前往 <a href="https://github.com/1175460179qqcom-rgb/starry-flight-/releases" target="_blank" rel="noopener">GitHub Releases</a></div>
+  </div>
+</div>
+
 <!-- 页脚 -->
 <footer id="footer">
   <div class="f-brand">STARRYFLIGHTPLAYER</div>
   <div class="f-links">
     <a href="#features">功能</a>
     <a href="#tech">技术特性</a>
-    <a href="#download">下载</a>
     <a href="#license">许可证</a>
     <a href="https://github.com/1175460179qqcom-rgb/starry-flight-" target="_blank" rel="noopener">GitHub 仓库</a>
     <a href="https://github.com/1175460179qqcom-rgb/starry-flight-/releases" target="_blank" rel="noopener">Releases</a>
+    <a href="mailto:1175460179@qq.com">问题反馈 · Feedback</a>
   </div>
   <div class="copy">© 2026 fly · StarryFlightPlayer · Released under the <b>Apache 2.0</b> License</div>
   <div class="copy">由中国大陆个人开发者 fly 制作 · Made with ❤ for local music lovers</div>
@@ -460,20 +441,28 @@
   }, { threshold: 0.12 });
   document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
 
-  // 下载区：从 GitHub API 拉取 Releases，渲染"选择版本下载"下拉
+  // 下载：顶部按钮弹出版本选择弹窗，动态拉取 GitHub Releases
   const SF_REPO = '1175460179qqcom-rgb/starry-flight-';
-  const dlSelect = document.getElementById('verSelect');
-  const dlGo = document.getElementById('dlGo');
-  const dlFallback = document.getElementById('dlFallback');
-  const dlSize = document.getElementById('dl-size');
-  const dlVersion = document.getElementById('dl-version');
+  const topDlBtn = document.getElementById('topDlBtn');
+  const dlModal = document.getElementById('dlModal');
+  const dlModalClose = document.getElementById('dlModalClose');
+  const dlVersionList = document.getElementById('dlVersionList');
+  const dlModalTip = document.getElementById('dlModalTip');
   const fmtMB = (b) => (b / 1048576).toFixed(1) + ' MB';
   const fmtDate = (iso) => {
     const d = new Date(iso);
     const p = (n) => String(n).padStart(2, '0');
     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
   };
+  const openModal = () => dlModal.classList.add('open');
+  const closeModal = () => dlModal.classList.remove('open');
+  topDlBtn.addEventListener('click', openModal);
+  dlModalClose.addEventListener('click', closeModal);
+  dlModal.addEventListener('click', (e) => { if (e.target === dlModal) closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
   async function loadReleases() {
+    dlVersionList.innerHTML = '<div class="dl-modal-loading">正在加载版本列表…</div>';
     try {
       const res = await fetch('https://api.github.com/repos/' + SF_REPO + '/releases', {
         headers: { 'Accept': 'application/vnd.github+json' }
@@ -486,43 +475,37 @@
         .sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
       if (withAsset.length === 0) throw new Error('no assets');
 
-      // 最新版元信息（动态填充，避免写死过期数值）
-      const latest = withAsset[0];
-      const latestAsset = latest.assets.find((a) => a.name === 'StarryFlightPlayer.exe');
-      dlVersion.textContent = latest.tag_name || 'latest';
-      dlSize.textContent = latestAsset ? fmtMB(latestAsset.size) : '—';
-
-      // 下拉：最新版 + 全部历史版本
-      dlSelect.innerHTML = '';
-      const latestOpt = document.createElement('option');
-      latestOpt.value = '';
-      latestOpt.textContent = '最新版（' + (latest.tag_name || 'latest') + ' · ' + (latestAsset ? fmtMB(latestAsset.size) : '—') + ' · ' + fmtDate(latest.published_at) + '）';
-      dlSelect.appendChild(latestOpt);
-      withAsset.forEach((r) => {
+      const mkItem = (r, isLatest) => {
         const a = r.assets.find((x) => x.name === 'StarryFlightPlayer.exe');
-        const o = document.createElement('option');
-        o.value = r.tag_name;
-        o.textContent = r.tag_name + (r.name && r.name !== r.tag_name ? '（' + r.name + '）' : '') + ' · ' + (a ? fmtMB(a.size) : '—') + ' · ' + fmtDate(r.published_at);
-        dlSelect.appendChild(o);
-      });
-      dlSelect.disabled = false;
-
-      // 选中变化 → 更新跳转链接（默认最新版直链）
-      dlSelect.addEventListener('change', () => {
-        const tag = dlSelect.value;
-        if (tag) {
-          dlGo.href = 'https://github.com/' + SF_REPO + '/releases/download/' + encodeURIComponent(tag) + '/StarryFlightPlayer.exe';
-        } else {
-          dlGo.href = 'https://github.com/' + SF_REPO + '/releases/latest/download/StarryFlightPlayer.exe';
+        const item = document.createElement('a');
+        item.className = 'dl-ver-item';
+        item.href = 'https://github.com/' + SF_REPO + '/releases/download/' + encodeURIComponent(r.tag_name) + '/StarryFlightPlayer.exe';
+        item.target = '_blank';
+        item.rel = 'noopener';
+        const left = document.createElement('span');
+        left.className = 'v-tag';
+        left.textContent = r.tag_name + (r.name && r.name !== r.tag_name ? '（' + r.name + '）' : '');
+        if (isLatest) {
+          const badge = document.createElement('span');
+          badge.className = 'v-latest';
+          badge.textContent = '最新';
+          left.appendChild(badge);
         }
-      });
+        const meta = document.createElement('span');
+        meta.className = 'v-meta';
+        meta.textContent = (a ? fmtMB(a.size) : '—') + ' · ' + fmtDate(r.published_at);
+        item.appendChild(left);
+        item.appendChild(meta);
+        return item;
+      };
+
+      dlVersionList.innerHTML = '';
+      dlVersionList.appendChild(mkItem(withAsset[0], true));
+      withAsset.slice(1).forEach((r) => dlVersionList.appendChild(mkItem(r, false)));
     } catch (e) {
-      // 优雅降级：隐藏选择器，展示 GitHub Releases 入口链接
-      dlFallback.style.display = 'block';
-      dlSelect.style.display = 'none';
-      dlGo.style.display = 'none';
-      const lab = document.querySelector('.dl-versions-label');
-      if (lab) lab.style.display = 'none';
+      // 优雅降级：展示 GitHub Releases 入口链接
+      dlVersionList.innerHTML = '';
+      dlModalTip.innerHTML = '版本列表加载失败，可前往 <a href="https://github.com/' + SF_REPO + '/releases" target="_blank" rel="noopener">GitHub Releases 页面</a> 选择任意版本下载';
     }
   }
   loadReleases();
